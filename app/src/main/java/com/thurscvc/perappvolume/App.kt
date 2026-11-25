@@ -1,4 +1,4 @@
-package com.example.miuixvolume
+package com.thurscvc.perappvolume
 
 import android.app.Application
 import android.content.ComponentName

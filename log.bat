@@ -1,3 +1,3 @@
 @echo off
-adb logcat -s MiuixVolume
+adb logcat -s PerAppVolume
 pause

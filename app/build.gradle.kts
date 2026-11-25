@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.miuixvolume"
+    namespace = "com.thurscvc.perappvolume"
 
     // Miuix 0.9.5-beta04 的 AAR 要求 minCompileSdk 37 + minCompileMinorSdk 2。
     // 当前使用旧 DSL（为了兼容 Kotlin 插件），所以用字符串形式指定 37.2。
@@ -15,11 +15,11 @@ android {
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "com.example.miuixvolume"
+        applicationId = "com.thurscvc.perappvolume"
         minSdk = 33
         targetSdk = 37
-        versionCode = 7
-        versionName = "1.5.0"
+        versionCode = 8
+        versionName = "1.6.0"
     }
 
     buildFeatures {

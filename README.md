@@ -1,4 +1,4 @@
-# 音量调节 / MiuixVolumeLsp
+# PerAppVolume / 音量调节
 
 一个基于 **Miuix** 的 LSPosed 模块，用于给不同的应用设置不同的媒体音量。
 
@@ -7,8 +7,8 @@ A Miuix-based LSPosed module for per-app media volume control.
 ## 功能
 
 - 首页显示 LSPosed 激活状态、设备信息、模块信息
-- 配置页列出当前 LSPosed 作用域内的应用
-- 每个应用单独设置进入时的媒体音量（0%–100%）
+- 音量配置页列出当前 LSPosed 作用域内的应用
+- 每个应用单独设置进入时的媒体音量（0%–100%，默认 0%）
 - 支持玻璃底栏 / 普通底栏
 - 支持隐藏桌面图标，隐藏后仍可从 LSPosed 管理器进入
 - LSPosed API 102 热重载（`autoHotReload=true`）
@@ -18,7 +18,7 @@ A Miuix-based LSPosed module for per-app media volume control.
 
 从 GitHub Releases 下载最新 APK：
 
-[Download latest release](https://github.com/ThursCvc/MiuixVolumeLsp/releases/latest)
+[Download latest release](https://github.com/ThursCvc/PerAppVolume/releases/latest)
 
 要求：
 
@@ -32,7 +32,7 @@ A Miuix-based LSPosed module for per-app media volume control.
 1. 安装 APK。
 2. 在 LSPosed / Vector 中启用 **音量调节**。
 3. 在作用域里勾选目标应用。
-4. 打开“音量调节”，进入“配置”页。
+4. 打开“音量调节”，进入“音量配置”页。
 5. 拖动目标应用的滑块，设置进入该应用时的音量。
 6. 强制停止目标应用，再重新打开。
 
@@ -47,7 +47,7 @@ A Miuix-based LSPosed module for per-app media volume control.
 如果桌面图标隐藏后确实无法进入，可以临时用：
 
 ```bash
-adb shell am start -n com.example.miuixvolume/.MainActivity
+adb shell am start -n com.thurscvc.perappvolume/.MainActivity
 ```
 
 ## 构建
@@ -114,7 +114,7 @@ autoHotReload=true
 ## 项目结构
 
 ```text
-app/src/main/java/com/example/miuixvolume/
+app/src/main/java/com/thurscvc/perappvolume/
 ├── App.kt              # XposedService / RemotePreferences
 ├── ConfigPage.kt       # 应用列表与每个应用的音量滑块
 ├── HomePage.kt         # 激活状态、设备信息、模块信息

@@ -1,6 +1,7 @@
-package com.example.miuixvolume
+package com.thurscvc.perappvolume
 
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -9,7 +10,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,19 +18,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
-import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
-import top.yukonga.miuix.kmp.icon.MiuixIcons
-import top.yukonga.miuix.kmp.icon.basic.Check
-import top.yukonga.miuix.kmp.icon.basic.Close
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
 @Composable
@@ -64,38 +62,36 @@ private fun ActivationCard(info: FrameworkInfo?) {
     val dark = MiuixTheme.colorScheme.background.luminance() < 0.5f
 
     val container = when {
-        active && dark -> Color(0xFF1A3825)
-        active -> Color(0xFFDFFAE4)
+        active && dark -> Color(0xFF17351F)
+        active -> Color(0xFFDDFAE4)
         dark -> Color(0xFF310808)
         else -> Color(0xFFF8E2E2)
     }
-    val content = when {
-        active && dark -> Color(0xFF9BE7AE)
-        active -> Color(0xFF1B5E20)
-        dark -> Color(0xFFFFB4AB)
-        else -> Color(0xFFF72727)
-    }
+    val textColor = MiuixTheme.colorScheme.onSurface
+    val iconColor = if (active) Color(0xFF36D267) else Color(0xFFF72727)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.defaultColors(
             color = container,
-            contentColor = content,
+            contentColor = textColor,
         ),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp),
+                .height(136.dp),
         ) {
-            Icon(
-                imageVector = if (active) MiuixIcons.Basic.Check else MiuixIcons.Basic.Close,
+            Image(
+                painter = painterResource(
+                    if (active) R.drawable.ic_activated else R.drawable.ic_deactivated,
+                ),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(120.dp)
                     .align(Alignment.BottomEnd)
-                    .offset(x = 24.dp, y = 24.dp),
-                tint = content.copy(alpha = 0.18f),
+                    .padding(end = 4.dp, bottom = 8.dp)
+                    .size(76.dp),
+                colorFilter = ColorFilter.tint(iconColor),
             )
 
             Column(
@@ -107,29 +103,29 @@ private fun ActivationCard(info: FrameworkInfo?) {
                     text = if (active) "已激活" else "未激活",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = content,
+                    color = textColor,
                 )
                 Spacer(modifier = Modifier.height(2.dp))
 
                 if (info != null) {
                     Text(
-                        text = "${info.name} ${info.version} (${info.versionCode})",
+                        text = "${info.version} (${info.versionCode})",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = content,
+                        color = textColor,
                     )
                     Text(
                         text = "API ${info.api}",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = content,
+                        color = textColor,
                     )
                 } else {
                     Text(
                         text = "LSPosed 未连接",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
-                        color = content,
+                        color = textColor,
                     )
                 }
             }

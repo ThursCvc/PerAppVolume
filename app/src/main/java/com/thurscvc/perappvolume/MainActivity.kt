@@ -1,4 +1,4 @@
-package com.example.miuixvolume
+package com.thurscvc.perappvolume
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -107,7 +107,7 @@ private fun VolumeApp() {
     val icons = listOf(MiuixIcons.Home, MiuixIcons.Tune, MiuixIcons.Settings)
     val title = when (selectedTab) {
         0 -> "音量调节"
-        1 -> "配置"
+        1 -> "音量配置"
         else -> "设置"
     }
 

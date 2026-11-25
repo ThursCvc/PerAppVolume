@@ -1,4 +1,4 @@
-package com.example.miuixvolume
+package com.thurscvc.perappvolume
 
 import android.app.Activity
 import android.content.Context
@@ -155,6 +155,6 @@ class ModuleMain : XposedModule() {
     }
 
     companion object {
-        private const val TAG = "MiuixVolume"
+        private const val TAG = "PerAppVolume"
     }
 }

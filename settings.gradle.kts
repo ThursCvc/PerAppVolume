@@ -16,5 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MiuixVolumeLsp"
+rootProject.name = "PerAppVolume"
 include(":app")
