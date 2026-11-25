@@ -1,7 +1,6 @@
 package com.thurscvc.perappvolume
 
 import android.os.Build
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,19 +14,21 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.CardDefaults
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 
@@ -82,16 +83,18 @@ private fun ActivationCard(info: FrameworkInfo?) {
                 .fillMaxWidth()
                 .height(136.dp),
         ) {
-            Image(
-                painter = painterResource(
-                    if (active) R.drawable.ic_activated else R.drawable.ic_deactivated,
-                ),
+            Icon(
+                imageVector = if (active) {
+                    Icons.Rounded.CheckCircleOutline
+                } else {
+                    Icons.Rounded.Cancel
+                },
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 4.dp, bottom = 8.dp)
                     .size(76.dp),
-                colorFilter = ColorFilter.tint(iconColor),
+                tint = iconColor,
             )
 
             Column(

@@ -63,6 +63,7 @@ kotlin {
 
 dependencies {
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.material.icons.extended)
     implementation(libs.miuix.ui)
     implementation(libs.miuix.preference)
     implementation(libs.miuix.icons)
