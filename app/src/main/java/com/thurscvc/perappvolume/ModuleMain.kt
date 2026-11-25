@@ -6,6 +6,7 @@ import android.content.SharedPreferences
 import android.media.AudioManager
 import android.os.Handler
 import android.os.Looper
+import android.os.Process
 import android.util.Log
 import io.github.libxposed.api.XposedModule
 import io.github.libxposed.api.XposedModuleInterface.HotReloadedParam
@@ -33,12 +34,29 @@ class ModuleMain : XposedModule() {
     private val leaveForeground = Runnable { inForeground.set(false) }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
-        log(Log.INFO, TAG, "loaded in ${param.processName}")
+        log(
+            Log.INFO,
+            TAG,
+            "loaded in ${param.processName} uid=${Process.myUid()} user=${Process.myUserHandle()}",
+        )
     }
 
     override fun onPackageReady(param: PackageReadyParam) {
+        log(
+            Log.INFO,
+            TAG,
+            "ready ${param.packageName} uid=${Process.myUid()} user=${Process.myUserHandle()}",
+        )
+
+        // Install hooks first: remote preferences may be unavailable in a
+        // secondary user before the module UI has ever been opened there.
+        runCatching { installHooks() }
+            .onFailure {
+                hookInstalled.set(false)
+                log(Log.ERROR, TAG, "install hooks failed", it)
+            }
+
         loadPrefs(param.packageName)
-        installHooks()
     }
 
     override fun onHotReloading(param: HotReloadingParam): Boolean {
@@ -59,8 +77,12 @@ class ModuleMain : XposedModule() {
         inForeground.set(false)
 
         val packageName = param.processName.substringBefore(":")
+        runCatching { installHooks() }
+            .onFailure {
+                hookInstalled.set(false)
+                log(Log.ERROR, TAG, "install hooks after reload failed", it)
+            }
         loadPrefs(packageName)
-        installHooks()
     }
 
     private fun installHooks() {
@@ -94,46 +116,55 @@ class ModuleMain : XposedModule() {
             handler.postDelayed(leaveForeground, 700L)
             result
         }
+
+        log(Log.INFO, TAG, "hooks installed in ${Process.myUserHandle()}")
     }
 
     private fun loadPrefs(packageName: String) {
         val percentKey = PrefsKeys.volumeKey(packageName)
-        val prefs = runCatching {
-            getRemotePreferences(PrefsKeys.GROUP)
-        }.getOrNull()
 
-        remotePrefs = prefs
-        if (prefs == null) {
-            enabled = true
-            targetPercent = PrefsKeys.DEFAULT_PERCENT
-            return
-        }
+        runCatching {
+            val prefs = getRemotePreferences(PrefsKeys.GROUP)
+            remotePrefs = prefs
+            enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+            targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
+                .coerceIn(0, 100)
 
-        enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
-        targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
-            .coerceIn(0, 100)
+            val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+                when (key) {
+                    PrefsKeys.ENABLED -> {
+                        enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+                    }
 
-        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
-            when (key) {
-                PrefsKeys.ENABLED -> {
-                    enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
-                }
-
-                percentKey -> {
-                    targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
-                        .coerceIn(0, 100)
+                    percentKey -> {
+                        targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
+                            .coerceIn(0, 100)
+                    }
                 }
             }
-        }
 
-        prefsListener = listener
-        runCatching {
+            prefsListener = listener
             prefs.registerOnSharedPreferenceChangeListener(listener)
+
+            log(Log.INFO, TAG, "prefs $packageName = $targetPercent% enabled=$enabled")
+        }.onFailure {
+            remotePrefs = null
+            enabled = true
+            targetPercent = PrefsKeys.DEFAULT_PERCENT
+            log(Log.ERROR, TAG, "remote prefs unavailable for $packageName", it)
         }
     }
 
     private fun applyVolume(activity: Activity) {
         try {
+            // RemotePreferences listeners are not always delivered between
+            // secondary-user processes. Re-read the current value on every
+            // resume so slider changes take effect without restarting the app.
+            val key = PrefsKeys.volumeKey(activity.packageName)
+            remotePrefs?.let { prefs ->
+                targetPercent = prefs.getInt(key, PrefsKeys.DEFAULT_PERCENT).coerceIn(0, 100)
+            }
+
             val audio = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             if (max <= 0) return

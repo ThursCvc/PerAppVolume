@@ -186,13 +186,23 @@ private fun AppVolumeCard(app: ScopedApp) {
             Slider(
                 value = percent.toFloat(),
                 onValueChange = {
-                    percent = it.roundToInt().coerceIn(0, 100)
+                    val value = it.roundToInt().coerceIn(0, 100)
+                    percent = value
+
+                    // Persist during the drag as well. If the slider's
+                    // onValueChangeFinished callback is not delivered, the
+                    // hook would otherwise keep using the old value.
+                    val editor = prefs?.edit()
+                    if (editor != null) {
+                        editor.putInt(key, value)
+                        editor.apply()
+                    }
                 },
                 onValueChangeFinished = {
                     val editor = prefs?.edit()
                     if (editor != null) {
                         editor.putInt(key, percent)
-                        editor.apply()
+                        editor.commit()
                     }
                 },
                 valueRange = 0f..100f,
