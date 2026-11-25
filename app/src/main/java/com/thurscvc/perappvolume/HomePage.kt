@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.Icons
@@ -19,6 +21,7 @@ import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.CheckCircleOutline
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +75,9 @@ private fun ActivationCard(info: FrameworkInfo?) {
     val iconColor = if (active) Color(0xFF36D267) else Color(0xFFF72727)
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp)),
         colors = CardDefaults.defaultColors(
             color = container,
             contentColor = textColor,
@@ -81,7 +86,7 @@ private fun ActivationCard(info: FrameworkInfo?) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(136.dp),
+                .height(108.dp),
         ) {
             Icon(
                 imageVector = if (active) {
@@ -92,8 +97,8 @@ private fun ActivationCard(info: FrameworkInfo?) {
                 contentDescription = null,
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 4.dp, bottom = 8.dp)
-                    .size(76.dp),
+                    .offset(x = 36.dp, y = 28.dp)
+                    .size(120.dp),
                 tint = iconColor,
             )
 
