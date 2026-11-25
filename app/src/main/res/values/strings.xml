@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">音量调节</string>
+    <string name="module_description">进入指定应用时修改媒体音量的 LSPosed 模块</string>
+</resources>

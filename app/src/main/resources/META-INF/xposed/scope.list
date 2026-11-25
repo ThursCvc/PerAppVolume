@@ -1,0 +1,6 @@
+# 在 LSPosed / Vector 管理器里手动勾选你要作用的应用。
+# 这里不写死包名，所以模块可以用于任意一个被勾选的应用。
+#
+# 示例：
+# com.ss.android.ugc.aweme
+# tv.danmaku.bili
