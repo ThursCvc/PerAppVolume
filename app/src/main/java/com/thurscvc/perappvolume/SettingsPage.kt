@@ -83,7 +83,7 @@ internal fun SettingsPage(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "使用步骤：在 LSPosed 中授权应用，再到音量配置里调节。",
+                        text = "使用步骤：在 LSPosed 中授权应用，再到音量配置里调节\n新添加应用默认音量为 0",
                         fontSize = 14.sp,
                         color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                         modifier = Modifier.padding(16.dp),

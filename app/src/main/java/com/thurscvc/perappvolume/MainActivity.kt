@@ -9,8 +9,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -31,7 +31,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
@@ -144,10 +143,10 @@ private fun VolumeApp() {
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer {
-                    scaleX = 1f - 0.05f * menuProgress
-                    scaleY = 1f - 0.05f * menuProgress
-                    alpha = 1f - 0.3f * menuProgress
-                    transformOrigin = TransformOrigin.Center
+                    scaleX = 1f - 0.02f * menuProgress
+                    scaleY = 1f - 0.02f * menuProgress
+                    translationX = -size.width * 0.06f * menuProgress
+                    alpha = 1f - 0.28f * menuProgress
                 }
                 .layerBackdrop(backdrop)
                 .background(background),
@@ -223,22 +222,35 @@ private fun VolumeApp() {
             }
         }
 
+        if (menuProgress > 0f) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = 0.24f * menuProgress)),
+            )
+        }
+
         AnimatedVisibility(
             visible = addAppOpen,
-            enter = scaleIn(
-                animationSpec = tween(300),
-                initialScale = 0.94f,
-            ) + fadeIn(animationSpec = tween(220)),
-            exit = scaleOut(
-                animationSpec = tween(240),
-                targetScale = 0.96f,
-            ) + fadeOut(animationSpec = tween(160)),
+            enter = slideInHorizontally(
+                animationSpec = tween(320),
+                initialOffsetX = { it },
+            ) + fadeIn(animationSpec = tween(180)),
+            exit = slideOutHorizontally(
+                animationSpec = tween(260),
+                targetOffsetX = { it },
+            ) + fadeOut(animationSpec = tween(140)),
             modifier = Modifier.fillMaxSize(),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clip(RoundedCornerShape(24.dp))
+                    .clip(
+                        RoundedCornerShape(
+                            topStart = 24.dp,
+                            bottomStart = 24.dp,
+                        ),
+                    )
                     .background(background),
             ) {
                 AddAppPage(

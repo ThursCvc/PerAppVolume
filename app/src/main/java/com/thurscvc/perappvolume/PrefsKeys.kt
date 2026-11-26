@@ -10,6 +10,8 @@ object PrefsKeys {
     const val DEFAULT_PERCENT = 0
 
     fun volumeKey(packageName: String) = "volume_$packageName"
+
+    fun appEnabledKey(packageName: String) = "app_enabled_$packageName"
 }
 
 object UiPrefs {

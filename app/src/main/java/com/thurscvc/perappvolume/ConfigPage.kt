@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Slider
+import top.yukonga.miuix.kmp.basic.Switch
 import top.yukonga.miuix.kmp.basic.Text
 import top.yukonga.miuix.kmp.icon.MiuixIcons
 import top.yukonga.miuix.kmp.icon.extended.AddCircle
@@ -160,6 +162,7 @@ internal fun ConfigPage(
 private fun AppVolumeCard(app: ScopedApp) {
     val prefs = App.prefs
     val key = PrefsKeys.volumeKey(app.packageName)
+    val enabledKey = PrefsKeys.appEnabledKey(app.packageName)
 
     var percent by remember(app.packageName, prefs) {
         mutableIntStateOf(
@@ -168,10 +171,18 @@ private fun AppVolumeCard(app: ScopedApp) {
                 ?: PrefsKeys.DEFAULT_PERCENT,
         )
     }
+    var appEnabled by remember(app.packageName, prefs) {
+        mutableStateOf(prefs?.getBoolean(enabledKey, true) ?: true)
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        insideMargin = PaddingValues(16.dp),
+        insideMargin = PaddingValues(
+            start = 16.dp,
+            top = 20.dp,
+            end = 16.dp,
+            bottom = 22.dp,
+        ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(
@@ -222,9 +233,19 @@ private fun AppVolumeCard(app: ScopedApp) {
                     fontWeight = FontWeight.Medium,
                     color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Switch(
+                    checked = appEnabled,
+                    onCheckedChange = { value ->
+                        appEnabled = value
+                        prefs?.edit()
+                            ?.putBoolean(enabledKey, value)
+                            ?.apply()
+                    },
+                )
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(18.dp))
 
             Slider(
                 value = percent.toFloat(),
@@ -249,9 +270,7 @@ private fun AppVolumeCard(app: ScopedApp) {
                     }
                 },
                 valueRange = 0f..100f,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 2.dp),
+                modifier = Modifier.fillMaxWidth(),
             )
         }
     }

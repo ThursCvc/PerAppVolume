@@ -114,8 +114,7 @@ class ModuleMain : XposedModule() {
 
         hook(onPause).intercept { chain ->
             val result = chain.proceed()
-            handler.removeCallbacks(leaveForeground)
-            handler.postDelayed(leaveForeground, 700L)
+            onActivityPaused()
             result
         }
 
@@ -131,13 +130,20 @@ class ModuleMain : XposedModule() {
         }
     }
 
+    private fun onActivityPaused() {
+        handler.removeCallbacks(leaveForeground)
+        handler.postDelayed(leaveForeground, 700L)
+    }
+
     private fun loadPrefs(packageName: String) {
         val percentKey = PrefsKeys.volumeKey(packageName)
+        val appEnabledKey = PrefsKeys.appEnabledKey(packageName)
 
         runCatching {
             val prefs = getRemotePreferences(PrefsKeys.GROUP)
             remotePrefs = prefs
-            enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+            enabled = prefs.getBoolean(PrefsKeys.ENABLED, true) &&
+                prefs.getBoolean(appEnabledKey, true)
             restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
             targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
                 .coerceIn(0, 100)
@@ -145,7 +151,13 @@ class ModuleMain : XposedModule() {
             val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
                 when (key) {
                     PrefsKeys.ENABLED -> {
-                        enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+                        enabled = prefs.getBoolean(PrefsKeys.ENABLED, true) &&
+                            prefs.getBoolean(appEnabledKey, true)
+                    }
+
+                    appEnabledKey -> {
+                        enabled = prefs.getBoolean(PrefsKeys.ENABLED, true) &&
+                            prefs.getBoolean(appEnabledKey, true)
                     }
 
                     PrefsKeys.RESTORE_VOLUME -> {
@@ -184,7 +196,11 @@ class ModuleMain : XposedModule() {
             remotePrefs?.let { prefs ->
                 targetPercent = prefs.getInt(key, PrefsKeys.DEFAULT_PERCENT).coerceIn(0, 100)
                 restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
+                enabled = prefs.getBoolean(PrefsKeys.ENABLED, true) &&
+                    prefs.getBoolean(PrefsKeys.appEnabledKey(activity.packageName), true)
             }
+
+            if (!enabled) return
 
             val audio = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
