@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -131,11 +130,6 @@ internal fun AddAppPage(
                 override fun onScopeRequestFailed(message: String) {
                     mainHandler.post {
                         pending = pending - app.packageName
-                        Toast.makeText(
-                            context,
-                            message.ifBlank { "作用域请求失败" },
-                            Toast.LENGTH_SHORT,
-                        ).show()
                     }
                 }
             },
