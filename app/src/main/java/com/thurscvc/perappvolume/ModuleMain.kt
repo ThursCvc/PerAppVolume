@@ -126,8 +126,9 @@ class ModuleMain : XposedModule() {
         if (activity == null || !enabled) return
 
         handler.removeCallbacks(leaveForeground)
-        inForeground.set(true)
-        applyVolume(activity)
+        if (inForeground.compareAndSet(false, true)) {
+            applyVolume(activity)
+        }
     }
 
     private fun loadPrefs(packageName: String) {

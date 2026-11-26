@@ -5,11 +5,12 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -28,9 +29,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -86,6 +91,11 @@ private fun VolumeApp() {
         mutableStateOf(uiPrefs.getBoolean(UiPrefs.TOP_BAR_BLUR, false))
     }
 
+    val menuProgress by animateFloatAsState(
+        targetValue = if (addAppOpen) 1f else 0f,
+        animationSpec = tween(300),
+    )
+
     val lifecycleOwner = LocalLifecycleOwner.current
     val topAppBarState = rememberTopAppBarState()
     val scrollBehavior = MiuixScrollBehavior(topAppBarState)
@@ -133,6 +143,12 @@ private fun VolumeApp() {
         Box(
             modifier = Modifier
                 .matchParentSize()
+                .graphicsLayer {
+                    scaleX = 1f - 0.05f * menuProgress
+                    scaleY = 1f - 0.05f * menuProgress
+                    alpha = 1f - 0.3f * menuProgress
+                    transformOrigin = TransformOrigin.Center
+                }
                 .layerBackdrop(backdrop)
                 .background(background),
         ) {
@@ -209,20 +225,27 @@ private fun VolumeApp() {
 
         AnimatedVisibility(
             visible = addAppOpen,
-            enter = slideInHorizontally(
+            enter = scaleIn(
                 animationSpec = tween(300),
-                initialOffsetX = { it },
-            ) + fadeIn(animationSpec = tween(180)),
-            exit = slideOutHorizontally(
-                animationSpec = tween(260),
-                targetOffsetX = { it },
+                initialScale = 0.94f,
+            ) + fadeIn(animationSpec = tween(220)),
+            exit = scaleOut(
+                animationSpec = tween(240),
+                targetScale = 0.96f,
             ) + fadeOut(animationSpec = tween(160)),
             modifier = Modifier.fillMaxSize(),
         ) {
-            AddAppPage(
-                onBack = { addAppOpen = false },
-                topBarBlur = topBarBlur,
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(background),
+            ) {
+                AddAppPage(
+                    onBack = { addAppOpen = false },
+                    topBarBlur = topBarBlur,
+                )
+            }
         }
     }
 }
