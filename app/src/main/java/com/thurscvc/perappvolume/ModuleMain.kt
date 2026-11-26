@@ -24,6 +24,13 @@ class ModuleMain : XposedModule() {
     @Volatile
     private var targetPercent = PrefsKeys.DEFAULT_PERCENT
 
+    @Volatile
+    private var restoreOnExit = false
+
+    @Volatile
+    private var savedVolume: Int? = null
+    private var audioContext: Context? = null
+
     private var remotePrefs: SharedPreferences? = null
     private var prefsListener: SharedPreferences.OnSharedPreferenceChangeListener? = null
 
@@ -31,7 +38,10 @@ class ModuleMain : XposedModule() {
     private val inForeground = AtomicBoolean(false)
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
-    private val leaveForeground = Runnable { inForeground.set(false) }
+    private val leaveForeground = Runnable {
+        inForeground.set(false)
+        restoreOriginalVolume()
+    }
 
     override fun onModuleLoaded(param: ModuleLoadedParam) {
         log(
@@ -98,15 +108,7 @@ class ModuleMain : XposedModule() {
 
         hook(onResume).intercept { chain ->
             val result = chain.proceed()
-            val activity = chain.thisObject as? Activity
-
-            if (activity != null && enabled) {
-                handler.removeCallbacks(leaveForeground)
-                if (inForeground.compareAndSet(false, true)) {
-                    applyVolume(activity)
-                }
-            }
-
+            onActivityResumed(chain.thisObject as? Activity)
             result
         }
 
@@ -120,6 +122,14 @@ class ModuleMain : XposedModule() {
         log(Log.INFO, TAG, "hooks installed in ${Process.myUserHandle()}")
     }
 
+    private fun onActivityResumed(activity: Activity?) {
+        if (activity == null || !enabled) return
+
+        handler.removeCallbacks(leaveForeground)
+        inForeground.set(true)
+        applyVolume(activity)
+    }
+
     private fun loadPrefs(packageName: String) {
         val percentKey = PrefsKeys.volumeKey(packageName)
 
@@ -127,6 +137,7 @@ class ModuleMain : XposedModule() {
             val prefs = getRemotePreferences(PrefsKeys.GROUP)
             remotePrefs = prefs
             enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+            restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
             targetPercent = prefs.getInt(percentKey, PrefsKeys.DEFAULT_PERCENT)
                 .coerceIn(0, 100)
 
@@ -134,6 +145,14 @@ class ModuleMain : XposedModule() {
                 when (key) {
                     PrefsKeys.ENABLED -> {
                         enabled = prefs.getBoolean(PrefsKeys.ENABLED, true)
+                    }
+
+                    PrefsKeys.RESTORE_VOLUME -> {
+                        restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
+                        if (!restoreOnExit) {
+                            savedVolume = null
+                            audioContext = null
+                        }
                     }
 
                     percentKey -> {
@@ -163,6 +182,7 @@ class ModuleMain : XposedModule() {
             val key = PrefsKeys.volumeKey(activity.packageName)
             remotePrefs?.let { prefs ->
                 targetPercent = prefs.getInt(key, PrefsKeys.DEFAULT_PERCENT).coerceIn(0, 100)
+                restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
             }
 
             val audio = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -171,6 +191,11 @@ class ModuleMain : XposedModule() {
 
             val target = (max * targetPercent / 100f).roundToInt().coerceIn(0, max)
             val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+            if (restoreOnExit && savedVolume == null) {
+                savedVolume = current
+                audioContext = activity.applicationContext
+            }
 
             if (current != target) {
                 audio.setStreamVolume(AudioManager.STREAM_MUSIC, target, 0)
@@ -183,6 +208,30 @@ class ModuleMain : XposedModule() {
         } catch (t: Throwable) {
             log(Log.ERROR, TAG, "failed to change volume", t)
         }
+    }
+
+    private fun restoreOriginalVolume() {
+        if (!restoreOnExit) return
+        val original = savedVolume ?: return
+        val context = audioContext ?: return
+
+        runCatching {
+            val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            if (max <= 0) return
+
+            audio.setStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                original.coerceIn(0, max),
+                0,
+            )
+            log(Log.INFO, TAG, "restored volume to $original")
+        }.onFailure {
+            log(Log.ERROR, TAG, "failed to restore volume", it)
+        }
+
+        savedVolume = null
+        audioContext = null
     }
 
     companion object {

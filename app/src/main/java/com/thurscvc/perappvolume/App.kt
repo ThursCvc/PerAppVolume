@@ -74,6 +74,31 @@ class App : Application(), XposedServiceHelper.OnServiceListener {
 
         private var service by mutableStateOf<XposedService?>(null)
 
+        fun requestScope(
+            packageName: String,
+            listener: XposedService.OnScopeEventListener,
+        ) {
+            val current = service
+            if (current == null) {
+                listener.onScopeRequestFailed("LSPosed 未连接")
+                return
+            }
+
+            runCatching {
+                current.requestScope(listOf(packageName), listener)
+            }.onFailure {
+                listener.onScopeRequestFailed(it.message ?: "作用域请求失败")
+            }
+        }
+
+        fun removeScope(packageName: String) {
+            val current = service ?: return
+            runCatching {
+                current.removeScope(listOf(packageName))
+                refreshScope()
+            }
+        }
+
         fun refreshScope() {
             val current = service
             scope = if (current == null) {

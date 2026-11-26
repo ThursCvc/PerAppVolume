@@ -2,7 +2,14 @@ package com.thurscvc.perappvolume
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -32,7 +39,6 @@ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
-import top.yukonga.miuix.kmp.basic.TopAppBar
 import top.yukonga.miuix.kmp.basic.rememberTopAppBarState
 import top.yukonga.miuix.kmp.blur.layerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop
@@ -72,8 +78,12 @@ private fun VolumeApp() {
 
     var selectedTab by remember { mutableIntStateOf(0) }
     var refreshKey by remember { mutableIntStateOf(0) }
+    var addAppOpen by remember { mutableStateOf(false) }
     var glassEnabled by remember {
         mutableStateOf(uiPrefs.getBoolean(UiPrefs.GLASS, true))
+    }
+    var topBarBlur by remember {
+        mutableStateOf(uiPrefs.getBoolean(UiPrefs.TOP_BAR_BLUR, false))
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -103,6 +113,10 @@ private fun VolumeApp() {
         .calculateBottomPadding()
     val contentBottom = navigationBottom + 96.dp
 
+    BackHandler(enabled = addAppOpen) {
+        addAppOpen = false
+    }
+
     val tabs = listOf("首页", "配置", "设置")
     val icons = listOf(MiuixIcons.Home, MiuixIcons.Tune, MiuixIcons.Settings)
     val title = when (selectedTab) {
@@ -124,14 +138,12 @@ private fun VolumeApp() {
         ) {
             Scaffold(
                 topBar = {
-                    TopAppBar(
+                    AppTopBar(
                         title = title,
-                        largeTitle = title,
-                        color = background,
-                        titleColor = MiuixTheme.colorScheme.onBackground,
-                        largeTitleColor = MiuixTheme.colorScheme.onBackground,
-                        titlePadding = 16.dp,
                         scrollBehavior = scrollBehavior,
+                        background = background,
+                        blurred = topBarBlur,
+                        backdrop = backdrop,
                     )
                 },
                 containerColor = Color.Transparent,
@@ -151,6 +163,7 @@ private fun VolumeApp() {
                         modifier = contentModifier,
                         topPadding = innerPadding.calculateTopPadding(),
                         bottomSpace = contentBottom + 12.dp,
+                        onAddApp = { addAppOpen = true },
                     )
 
                     else -> SettingsPage(
@@ -159,6 +172,8 @@ private fun VolumeApp() {
                         bottomSpace = contentBottom + 12.dp,
                         glassEnabled = glassEnabled,
                         onGlassChange = { glassEnabled = it },
+                        topBarBlur = topBarBlur,
+                        onTopBarBlurChange = { topBarBlur = it },
                     )
                 }
             }
@@ -190,6 +205,24 @@ private fun VolumeApp() {
                     )
                 }
             }
+        }
+
+        AnimatedVisibility(
+            visible = addAppOpen,
+            enter = slideInHorizontally(
+                animationSpec = tween(300),
+                initialOffsetX = { it },
+            ) + fadeIn(animationSpec = tween(180)),
+            exit = slideOutHorizontally(
+                animationSpec = tween(260),
+                targetOffsetX = { it },
+            ) + fadeOut(animationSpec = tween(160)),
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            AddAppPage(
+                onBack = { addAppOpen = false },
+                topBarBlur = topBarBlur,
+            )
         }
     }
 }

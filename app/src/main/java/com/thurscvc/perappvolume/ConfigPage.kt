@@ -1,10 +1,8 @@
 package com.thurscvc.perappvolume
 
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.drawable.Drawable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -40,8 +37,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.icon.MiuixIcons
+import top.yukonga.miuix.kmp.icon.extended.AddCircle
+import top.yukonga.miuix.kmp.icon.extended.ChevronForward
 import top.yukonga.miuix.kmp.theme.MiuixTheme
 import kotlin.math.roundToInt
 
@@ -56,6 +57,7 @@ internal fun ConfigPage(
     modifier: Modifier,
     topPadding: Dp,
     bottomSpace: Dp,
+    onAddApp: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = App.scope
@@ -93,6 +95,47 @@ internal fun ConfigPage(
         ),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
+        item {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .clickable { onAddApp() },
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = MiuixIcons.AddCircle,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "添加应用",
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight(550),
+                        )
+                        Text(
+                            text = "从已安装应用中选择",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight(550),
+                            color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                        )
+                    }
+                    Icon(
+                        imageVector = MiuixIcons.ChevronForward,
+                        contentDescription = null,
+                        tint = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+            }
+        }
+
         if (apps.isEmpty()) {
             item {
                 Text(
@@ -214,12 +257,4 @@ private fun AppVolumeCard(app: ScopedApp) {
     }
 }
 
-private fun Drawable.toImageBitmap(sizePx: Int): ImageBitmap {
-    val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
-    val canvas = Canvas(bitmap)
 
-    setBounds(0, 0, sizePx, sizePx)
-    draw(canvas)
-
-    return bitmap.asImageBitmap()
-}
