@@ -1,5 +1,9 @@
 package com.thurscvc.perappvolume
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -18,7 +22,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -38,6 +44,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Checkbox
 import top.yukonga.miuix.kmp.basic.Icon
 import top.yukonga.miuix.kmp.basic.Slider
 import top.yukonga.miuix.kmp.basic.Switch
@@ -59,6 +66,7 @@ internal fun ConfigPage(
     modifier: Modifier,
     topPadding: Dp,
     bottomSpace: Dp,
+    refreshKey: Int,
     onAddApp: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -153,26 +161,66 @@ internal fun ConfigPage(
         }
 
         items(apps, key = { it.packageName }) { app ->
-            AppVolumeCard(app)
+            AppVolumeCard(app, refreshKey)
         }
     }
 }
 
 @Composable
-private fun AppVolumeCard(app: ScopedApp) {
+private fun AppVolumeCard(app: ScopedApp, refreshKey: Int) {
     val prefs = App.prefs
     val key = PrefsKeys.volumeKey(app.packageName)
     val enabledKey = PrefsKeys.appEnabledKey(app.packageName)
 
-    var percent by remember(app.packageName, prefs) {
+    val context = LocalContext.current
+    var percent by remember(app.packageName, prefs, refreshKey) {
+        val remembered = if (prefs?.getBoolean(PrefsKeys.rememberKey(app.packageName), false) == true) {
+            RememberStore.get(context, app.packageName)
+        } else {
+            -1
+        }
         mutableIntStateOf(
-            prefs?.getInt(key, PrefsKeys.DEFAULT_PERCENT)
-                ?.coerceIn(0, 100)
-                ?: PrefsKeys.DEFAULT_PERCENT,
+            if (remembered in 0..100) {
+                remembered
+            } else {
+                prefs?.getInt(key, PrefsKeys.DEFAULT_PERCENT)
+                    ?.coerceIn(0, 100)
+                    ?: PrefsKeys.DEFAULT_PERCENT
+            },
         )
     }
     var appEnabled by remember(app.packageName, prefs) {
         mutableStateOf(prefs?.getBoolean(enabledKey, true) ?: true)
+    }
+    var rememberEnabled by remember(app.packageName, prefs, refreshKey) {
+        mutableStateOf(
+            prefs?.getBoolean(PrefsKeys.rememberKey(app.packageName), false) ?: false,
+        )
+    }
+
+    DisposableEffect(app.packageName) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(receiverContext: Context, intent: Intent) {
+                if (intent.action != RememberStore.ACTION) return
+                if (intent.getStringExtra("package") != app.packageName) return
+                val remembered = intent.getIntExtra("percent", -1)
+                if (remembered in 0..100) {
+                    percent = remembered
+                }
+            }
+        }
+
+        context.registerReceiver(
+            receiver,
+            IntentFilter(RememberStore.ACTION),
+            Context.RECEIVER_EXPORTED,
+        )
+
+        onDispose {
+            runCatching {
+                context.unregisterReceiver(receiver)
+            }
+        }
     }
 
     Card(
@@ -181,7 +229,7 @@ private fun AppVolumeCard(app: ScopedApp) {
             start = 16.dp,
             top = 20.dp,
             end = 16.dp,
-            bottom = 22.dp,
+            bottom = 20.dp,
         ),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -245,7 +293,7 @@ private fun AppVolumeCard(app: ScopedApp) {
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
             Slider(
                 value = percent.toFloat(),
@@ -260,6 +308,7 @@ private fun AppVolumeCard(app: ScopedApp) {
                     if (editor != null) {
                         editor.putInt(key, value)
                         editor.apply()
+                        RememberStore.remove(context, app.packageName)
                     }
                 },
                 onValueChangeFinished = {
@@ -272,6 +321,47 @@ private fun AppVolumeCard(app: ScopedApp) {
                 valueRange = 0f..100f,
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "记住应用内音量",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight(550),
+                    )
+                    Text(
+                        text = "下次进入时恢复上次调整的音量",
+                        fontSize = 12.sp,
+                        color = MiuixTheme.colorScheme.onSurfaceVariantSummary,
+                    )
+                }
+                Checkbox(
+                    state = if (rememberEnabled) ToggleableState.On else ToggleableState.Off,
+                    onClick = {
+                        val value = !rememberEnabled
+                        rememberEnabled = value
+                        val editor = prefs?.edit()
+                        if (editor != null) {
+                            editor.putBoolean(PrefsKeys.rememberKey(app.packageName), value)
+                            if (value) {
+                                val remembered = RememberStore.get(context, app.packageName)
+                                if (remembered in 0..100) {
+                                    percent = remembered
+                                    editor.putInt(key, remembered)
+                                }
+                            } else {
+                                RememberStore.remove(context, app.packageName)
+                            }
+                            editor.apply()
+                        }
+                    },
+                )
+            }
         }
     }
 }

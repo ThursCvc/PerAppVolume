@@ -12,6 +12,8 @@ object PrefsKeys {
     fun volumeKey(packageName: String) = "volume_$packageName"
 
     fun appEnabledKey(packageName: String) = "app_enabled_$packageName"
+
+    fun rememberKey(packageName: String) = "remember_$packageName"
 }
 
 object UiPrefs {

@@ -24,6 +24,14 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.PerAppVolume">
 
+        <receiver
+            android:name=".RememberReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.thurscvc.perappvolume.REMEMBER_VOLUME" />
+            </intent-filter>
+        </receiver>
+
         <activity
             android:name=".MainActivity"
             android:exported="true" />

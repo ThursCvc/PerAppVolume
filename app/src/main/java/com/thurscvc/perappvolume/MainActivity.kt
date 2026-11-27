@@ -178,6 +178,7 @@ private fun VolumeApp() {
                         modifier = contentModifier,
                         topPadding = innerPadding.calculateTopPadding(),
                         bottomSpace = contentBottom + 12.dp,
+                        refreshKey = refreshKey,
                         onAddApp = { addAppOpen = true },
                     )
 

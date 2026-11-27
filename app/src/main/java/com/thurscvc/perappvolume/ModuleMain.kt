@@ -2,6 +2,7 @@ package com.thurscvc.perappvolume
 
 import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.content.SharedPreferences
 import android.media.AudioManager
 import android.os.Handler
@@ -13,6 +14,7 @@ import io.github.libxposed.api.XposedModuleInterface.HotReloadedParam
 import io.github.libxposed.api.XposedModuleInterface.HotReloadingParam
 import io.github.libxposed.api.XposedModuleInterface.ModuleLoadedParam
 import io.github.libxposed.api.XposedModuleInterface.PackageReadyParam
+import java.lang.ref.WeakReference
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.roundToInt
 
@@ -36,6 +38,8 @@ class ModuleMain : XposedModule() {
 
     private val hookInstalled = AtomicBoolean(false)
     private val inForeground = AtomicBoolean(false)
+    private var activeActivity: WeakReference<Activity>? = null
+    private var rememberRunnable: Runnable? = null
 
     private val handler by lazy { Handler(Looper.getMainLooper()) }
     private val leaveForeground = Runnable {
@@ -113,10 +117,27 @@ class ModuleMain : XposedModule() {
         }
 
         hook(onPause).intercept { chain ->
+            val activity = chain.thisObject as? Activity
             val result = chain.proceed()
-            onActivityPaused()
+            onActivityPaused(activity)
             result
         }
+
+        // Some apps do not reliably deliver onPause before the process is
+        // frozen. Also capture volume changes made through the app itself.
+        AudioManager::class.java.declaredMethods
+            .filter {
+                it.name == "setStreamVolume" || it.name == "adjustStreamVolume"
+            }
+            .forEach { method ->
+                runCatching {
+                    hook(method).intercept { chain ->
+                        val result = chain.proceed()
+                        activeActivity?.get()?.let { scheduleRemember(it) }
+                        result
+                    }
+                }
+            }
 
         log(Log.INFO, TAG, "hooks installed in ${Process.myUserHandle()}")
     }
@@ -124,15 +145,67 @@ class ModuleMain : XposedModule() {
     private fun onActivityResumed(activity: Activity?) {
         if (activity == null || !enabled) return
 
+        activeActivity = WeakReference(activity)
         handler.removeCallbacks(leaveForeground)
         if (inForeground.compareAndSet(false, true)) {
             applyVolume(activity)
         }
     }
 
-    private fun onActivityPaused() {
+    private fun onActivityPaused(activity: Activity?) {
+        rememberRunnable?.let { handler.removeCallbacks(it) }
+        rememberRunnable = null
+        if (activity != null) {
+            saveRememberedVolume(activity)
+        }
         handler.removeCallbacks(leaveForeground)
         handler.postDelayed(leaveForeground, 700L)
+    }
+
+    private fun scheduleRemember(activity: Activity) {
+        rememberRunnable?.let { handler.removeCallbacks(it) }
+        val runnable = Runnable { saveRememberedVolume(activity) }
+        rememberRunnable = runnable
+        handler.postDelayed(runnable, 250L)
+    }
+
+    private fun saveRememberedVolume(activity: Activity) {
+        val prefs = remotePrefs ?: return
+        if (!prefs.getBoolean(PrefsKeys.rememberKey(activity.packageName), false)) {
+            return
+        }
+
+        runCatching {
+            val audio = activity.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+            if (max <= 0) return
+
+            val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+            val percent = (current * 100f / max).roundToInt().coerceIn(0, 100)
+            // The target app can always write its own private preferences,
+            // unlike the read-only RemotePreferences exposed to injected code.
+            activity.getSharedPreferences(
+                REMEMBER_STORE,
+                Context.MODE_PRIVATE,
+            ).edit()
+                .putInt(activity.packageName, percent)
+                .apply()
+
+            activity.sendBroadcast(
+                Intent(RememberStore.ACTION)
+                    .setPackage(MODULE_PACKAGE)
+                    .addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES)
+                    .putExtra("package", activity.packageName)
+                    .putExtra("percent", percent),
+            )
+            log(
+                Log.INFO,
+                TAG,
+                "${activity.packageName}: remembered ${percent}%",
+            )
+        }.onFailure {
+            log(Log.ERROR, TAG, "failed to remember volume", it)
+        }
     }
 
     private fun loadPrefs(packageName: String) {
@@ -193,11 +266,30 @@ class ModuleMain : XposedModule() {
             // secondary-user processes. Re-read the current value on every
             // resume so slider changes take effect without restarting the app.
             val key = PrefsKeys.volumeKey(activity.packageName)
+            var effectivePercent = targetPercent
             remotePrefs?.let { prefs ->
                 targetPercent = prefs.getInt(key, PrefsKeys.DEFAULT_PERCENT).coerceIn(0, 100)
                 restoreOnExit = prefs.getBoolean(PrefsKeys.RESTORE_VOLUME, false)
                 enabled = prefs.getBoolean(PrefsKeys.ENABLED, true) &&
                     prefs.getBoolean(PrefsKeys.appEnabledKey(activity.packageName), true)
+
+                val remember = prefs.getBoolean(
+                    PrefsKeys.rememberKey(activity.packageName),
+                    false,
+                )
+                val remembered = if (remember) {
+                    activity.getSharedPreferences(
+                        REMEMBER_STORE,
+                        Context.MODE_PRIVATE,
+                    ).getInt(activity.packageName, -1)
+                } else {
+                    -1
+                }
+                effectivePercent = if (remember && remembered in 0..100) {
+                    remembered
+                } else {
+                    targetPercent
+                }
             }
 
             if (!enabled) return
@@ -206,12 +298,13 @@ class ModuleMain : XposedModule() {
             val max = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
             if (max <= 0) return
 
-            val target = (max * targetPercent / 100f).roundToInt().coerceIn(0, max)
+            val target = (max * effectivePercent / 100f).roundToInt().coerceIn(0, max)
             val current = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+
+            audioContext = activity.applicationContext
 
             if (restoreOnExit && savedVolume == null) {
                 savedVolume = current
-                audioContext = activity.applicationContext
             }
 
             if (current != target) {
@@ -219,7 +312,7 @@ class ModuleMain : XposedModule() {
                 log(
                     Log.INFO,
                     TAG,
-                    "${activity.packageName}: $current -> $target ($targetPercent%)",
+                    "${activity.packageName}: $current -> $target ($effectivePercent%)",
                 )
             }
         } catch (t: Throwable) {
@@ -253,5 +346,7 @@ class ModuleMain : XposedModule() {
 
     companion object {
         private const val TAG = "PerAppVolume"
+        private const val REMEMBER_STORE = "perappvolume_remembered"
+        private const val MODULE_PACKAGE = "com.thurscvc.perappvolume"
     }
 }

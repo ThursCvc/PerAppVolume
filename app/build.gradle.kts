@@ -18,8 +18,8 @@ android {
         applicationId = "com.thurscvc.perappvolume"
         minSdk = 33
         targetSdk = 37
-        versionCode = 29
-        versionName = "1.8.0"
+        versionCode = 44
+        versionName = "1.9.0"
     }
 
     buildFeatures {
