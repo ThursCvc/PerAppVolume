@@ -15,11 +15,11 @@ android {
     buildToolsVersion = "37.0.0"
 
     defaultConfig {
-        applicationId = "com.thurscvc.perappvolume"
+        applicationId = "io.github.thurscvc.perappvolume"
         minSdk = 33
         targetSdk = 37
-        versionCode = 44
-        versionName = "1.9.0"
+        versionCode = 45
+        versionName = "2.0.0"
     }
 
     buildFeatures {

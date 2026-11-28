@@ -11,7 +11,7 @@ import android.content.Intent
  * remembered value.
  */
 object RememberStore {
-    const val ACTION = "com.thurscvc.perappvolume.REMEMBER_VOLUME"
+    const val ACTION = "io.github.thurscvc.perappvolume.REMEMBER_VOLUME"
     private const val FILE = "remembered_volumes"
 
     fun get(context: Context, packageName: String): Int =

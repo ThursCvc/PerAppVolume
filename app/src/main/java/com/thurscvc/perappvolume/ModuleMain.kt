@@ -347,6 +347,6 @@ class ModuleMain : XposedModule() {
     companion object {
         private const val TAG = "PerAppVolume"
         private const val REMEMBER_STORE = "perappvolume_remembered"
-        private const val MODULE_PACKAGE = "com.thurscvc.perappvolume"
+        private const val MODULE_PACKAGE = "io.github.thurscvc.perappvolume"
     }
 }

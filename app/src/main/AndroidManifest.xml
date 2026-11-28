@@ -28,7 +28,7 @@
             android:name=".RememberReceiver"
             android:exported="true">
             <intent-filter>
-                <action android:name="com.thurscvc.perappvolume.REMEMBER_VOLUME" />
+                <action android:name="io.github.thurscvc.perappvolume.REMEMBER_VOLUME" />
             </intent-filter>
         </receiver>
 
